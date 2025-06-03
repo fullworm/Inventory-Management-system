@@ -1,12 +1,14 @@
-# Python specific
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-env/
-venv/
-ENV/
 build/
 develop-eggs/
 dist/
@@ -23,7 +25,7 @@ wheels/
 .installed.cfg
 *.egg
 
-# IDE specific
+# IDE
 .idea/
 .vscode/
 *.swp

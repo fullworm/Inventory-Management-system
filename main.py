@@ -17,7 +17,7 @@ class App:
         self.canvas3.create_text(200, 150, text="Canvas 3 (Stats)", font=("Helvetica", 16))
 
         self.current_canvas = None
-        self.show_canvas(self.canvas1) # Start with Canvas 1
+        self.show_canvas(self.canvas1)
 
         # Navigation buttons
         button_frame = ttk.Frame(master)
