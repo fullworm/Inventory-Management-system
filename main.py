@@ -1,45 +1,54 @@
 import ttkbootstrap as ttk
-from tkinter import Canvas
 from ttkbootstrap.constants import *
+from states import loginState
+from states import menuState
 
 class App:
     def __init__(self, master):
         self.master = master
-        master.title("Canvas Switching App")
+        master.title("Manejador de inventario y ordenes")
 
-        self.canvas1 = Canvas(master, width=400, height=300, bg="lightblue")
-        self.canvas1.create_text(200, 150, text="Canvas 1 (Inventory)", font=("Helvetica", 16))
+        self.states = {
+            "LoginState": loginState.loginState(master),
+            "MenuState": menuState.MenuState(master)
+        }
 
-        self.canvas2 = Canvas(master, width=400, height=300, bg="lightgreen")
-        self.canvas2.create_text(200, 150, text="Canvas 2 (Map)", font=("Helvetica", 16))
 
-        self.canvas3 = Canvas(master, width=400, height=300, bg="lightcoral")
-        self.canvas3.create_text(200, 150, text="Canvas 3 (Stats)", font=("Helvetica", 16))
+        self.current_canvas = ""
+        self.show_canvas("LoginState")
 
-        self.current_canvas = None
-        self.show_canvas(self.canvas1)
-
-        # Navigation buttons
-        button_frame = ttk.Frame(master)
-        button_frame.pack(pady=10)
-
-        btn_canvas1 = ttk.Button(button_frame, text="Show Inventory", command=lambda: self.show_canvas(self.canvas1), bootstyle=PRIMARY)
-        btn_canvas1.pack(side=LEFT, padx=5)
-
-        btn_canvas2 = ttk.Button(button_frame, text="Show Map", command=lambda: self.show_canvas(self.canvas2), bootstyle=INFO)
-        btn_canvas2.pack(side=LEFT, padx=5)
-
-        btn_canvas3 = ttk.Button(button_frame, text="Show Stats", command=lambda: self.show_canvas(self.canvas3), bootstyle=WARNING)
-        btn_canvas3.pack(side=LEFT, padx=5)
-
-    def show_canvas(self, canvas_to_show):
+    def show_canvas(self, state_name):
+        # Hide current state if exists
         if self.current_canvas:
-            self.current_canvas.pack_forget() # Hide the currently visible canvas
+            self.current_canvas.canvas.pack_forget()
 
-        canvas_to_show.pack(fill=BOTH, expand=YES) # Show the new canvas
-        self.current_canvas = canvas_to_show
+        self.current_canvas = self.states[state_name]
+        self.current_canvas.canvas.pack(fill=BOTH, expand=YES)
+
+        # Set up state checking
+        self.check_state_transition()
+
+    def check_state_transition(self):
+        # Schedule state check every 100ms
+        def check():
+            if self.current_canvas:
+                next_state = self.current_canvas.getNextState()
+                if next_state and next_state in self.states:
+                    # Reset the next state
+                    self.current_canvas.setNextState(None)
+                    # Switch to new state
+                    self.show_canvas(next_state)
+
+            # Schedule next check
+            self.master.after(100, check)
+
+        # Start checking
+        self.master.after(100, check)
+
 
 if __name__ == "__main__":
-    app = ttk.Window(themename="flatly")
+    app = ttk.Window(themename="solar")
+    app.geometry("1920x1080")
     main_app = App(app)
+    main_app.check_state_transition()
     app.mainloop()
