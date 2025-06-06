@@ -1,1 +1,5 @@
 ttkbootstrap~=1.13.8
+
+pillow~=10.4.0
+pip~=25.1.1
+bcrypt~=4.3.0

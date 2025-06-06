@@ -2,6 +2,7 @@
 
 from states.state import State
 import ttkbootstrap as ttk
+from ttkbootstrap.constants import *
 from states import constants as c
 
 class MenuState(State):
@@ -26,3 +27,4 @@ class MenuState(State):
         self.profileButton.place(relx= 0.8, anchor="ne" , y=100)
 
         self.canvas.pack()
+

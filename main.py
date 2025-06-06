@@ -1,3 +1,6 @@
+import os
+from database import database_setup as db
+from database import users as u
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 from states import loginState
@@ -5,6 +8,7 @@ from states import menuState
 
 class App:
     def __init__(self, master):
+
         self.master = master
         master.title("Manejador de inventario y ordenes")
 
@@ -47,6 +51,8 @@ class App:
 
 
 if __name__ == "__main__":
+    if not os.path.exists("database/database.sql"):
+        db.setup_database()
     app = ttk.Window(themename="solar")
     app.geometry("1920x1080")
     main_app = App(app)

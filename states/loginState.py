@@ -1,6 +1,8 @@
 from states import state
 import ttkbootstrap as ttk
 from states import constants as c
+from database import users as u
+from tkinter import messagebox
 
 class loginState(state.State):
     def __init__(self, window):
@@ -16,7 +18,15 @@ class loginState(state.State):
         self.usernameEntry.pack()
         self.usernameEntry.focus()
 
-        self.passwordEntry = ttk.Entry(self.canvas, show="*")  # show="*" for password masking
+        self.validate_cmd = self.window.register(u.validate_password)
+        self.passwordEntry = ttk.Entry(
+            self.canvas,
+            show="*",
+            validate='key',
+            validatecommand=(self.validate_cmd, '%P')
+        )
+
+        # show="*" for password masking
         self.passwordLabel = ttk.Label(self.canvas, text="Password")
         self.passwordEntry.pack()
 
@@ -32,8 +42,24 @@ class loginState(state.State):
 
         self.canvas.pack()
 
+
+
     def handle_login(self):
         username = self.usernameEntry.get()
         password = self.passwordEntry.get()
-        print(f"Login attempt - Username: {username}, Password: {password}")
-        self.next_state = "MenuState"
+
+        if not username or not password:  # Check for empty fields
+            messagebox.showerror("Error", "Please fill in all fields")
+            return
+
+        try:
+            if u.user_login(username, password):
+                self.next_state = "MenuState"
+            else:
+                messagebox.showerror("Error", "Invalid username or password")
+                self.passwordEntry.delete(0, 'end')  # Clear password field
+
+        except Exception as e:
+            messagebox.showerror("Error", "Login failed. Please try again.")
+            print(f"Login error: {str(e)}")  # For debugging
+
