@@ -12,11 +12,16 @@ class MenuState(State):
         self.canvas = ttk.Canvas(self.window, width=c.WIDTH, height=c.HEIGHT)
 
         #Buttons
-        self.inventoryButton = ttk.Button(self.canvas, text="Inventario", command=self.setNextState("InventoryState"))
-        self.orderButton = ttk.Button(self.canvas, text="Ordenes", command=self.setNextState("OrderState"))
-        self.historyButton = ttk.Button(self.canvas, text="Historial", command=self.setNextState("HistoryState"))
-        self.settingsButton = ttk.Button(self.canvas, text="Configuraciones", command=self.setNextState("SettingsState"))
-        self.profileButton = ttk.Button(self.canvas,bootstyle="success-circle") # supposed to be circle but doesnt work for some reason
+        self.inventoryButton = ttk.Button(self.canvas, text="Inventario", command=lambda:self.setNextState("InventoryState"))
+        self.inventoryButton.pack()
+        self.orderButton = ttk.Button(self.canvas, text="Ordenes", command=lambda:self.setNextState("OrderState"))
+        self.orderButton.pack()
+        self.historyButton = ttk.Button(self.canvas, text="Historial", command=lambda:self.setNextState("HistoryState"))
+        self.historyButton.pack()
+        self.settingsButton = ttk.Button(self.canvas, text="Configuraciones", command=lambda:self.setNextState("SettingsState"))
+        self.settingsButton.pack()
+        self.profileButton = ttk.Button(self.canvas, text="Profile Photo",bootstyle="success-circle") # supposed to be circle but doesnt work for some reason
+        self.profileButton.pack()
 
         #setting position on canvas
 

@@ -1,22 +1,22 @@
 import os
-from database import database_setup as db
-from database import users as u
+from database import database_func as db
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 from states import loginState
 from states import menuState
+from states import inventoryState
 
 class App:
     def __init__(self, master):
 
         self.master = master
-        master.title("Manejador de inventario y ordenes")
+        self.master.title("Manejador de inventario y ordenes")
 
         self.states = {
-            "LoginState": loginState.loginState(master),
-            "MenuState": menuState.MenuState(master)
+            "LoginState": loginState.loginState(self.master),
+            "MenuState": menuState.MenuState(self.master),
+            "InventoryState": inventoryState.InventoryState(self.master)
         }
-
 
         self.current_canvas = ""
         self.show_canvas("LoginState")
