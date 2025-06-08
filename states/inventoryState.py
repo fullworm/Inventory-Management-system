@@ -1,9 +1,9 @@
 from states.state import State
-from database import database_func as db
 from states import constants as c
 import ttkbootstrap as ttk
 from ttkbootstrap.tableview import Tableview
 from ttkbootstrap.constants import *
+from states.Popup import product_modification_popup as adp
 
 class InventoryState(State):
     def __init__(self, window):
@@ -13,17 +13,17 @@ class InventoryState(State):
         self.colors = self.window.style.colors
 
         #test data
-        coldata = [
+        self.coldata = [
             {"text": "Nombre de Producto", "stretch":True},
             {"text": "Cantidad", "stretch":True},
             {"text": "Precio", "stretch":True},
-            {"text": "Tipo", "stretch":True},
+            {"text": "Tipo", "stretch":True}
         ]
-        rowdata = [
-            ("pan", "10", "100", "food"),
-            ("potato", "20", "200", "food"),
-            ("tomato", "30", "300", "food"),
-            ("sandwich", "69", "420", "food")
+        self.rowdata = [
+            ["pan", 10, 100, "food"],
+            ["potato", 20, 200, "food"],
+            ["tomato", 30, 300, "food"],
+            ["sandwich", 69, 420, "food"]
         ]
 
         #displays the inventory in a table
@@ -33,18 +33,18 @@ class InventoryState(State):
             self.table_frame,
             paginated=True,
             searchable=True,
-            coldata=coldata,
-            rowdata=rowdata,
+            coldata=self.coldata,
+            rowdata=self.rowdata,
             yscrollbar=True,
             stripecolor=(self.colors.active, None),
             height=20
         )
         self.InventoryTable.pack(fill="x", expand=True)
 
-        self.addButton = ttk.Button(self.canvas, text="Agregar/Aumentar Producto", command=lambda:self.add_popup())
+        self.addButton = ttk.Button(self.canvas, text="Agregar/Aumentar Producto", command=lambda:self.modify_inventory(True, "Agregar Producto"))
         self.addButton.pack()
 
-        self.removeButton = ttk.Button(self.canvas, text="Quitar/Disminuir producto", command=lambda:self.take_popup())
+        self.removeButton = ttk.Button(self.canvas, text="Quitar/Disminuir producto", command=lambda:self.modify_inventory(False, "Remover Producto"))
         self.removeButton.pack()
 
 
@@ -58,3 +58,41 @@ class InventoryState(State):
         self.removeButton.place(relx=0.2, rely=0.2, anchor="nw")
 
         self.canvas.pack(fill='both', expand=YES)
+
+    def modify_inventory(self, add:bool, title):
+
+        if adp.ModifyProductPopup.get_count() > 0:
+            return
+
+        existing_products = [row[0] for row in self.rowdata]
+
+        popup = adp.ModifyProductPopup(self.canvas, products=existing_products, name=title)
+
+        if popup.result is None:
+            return
+
+        product = popup.result["product"]
+        quantity = popup.result["quantity"]
+
+        # Update product table
+        for p in self.rowdata:
+            if p[0] == product:
+                if add:
+                    p[1] += quantity
+                else:
+                    if p[1] < quantity:
+                        p[1] = 0
+                    else:
+                        p[1] -= quantity
+        self.InventoryTable.build_table_data(
+            self.coldata, self.rowdata
+        )
+
+
+        return
+
+
+
+
+
+

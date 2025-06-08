@@ -20,7 +20,7 @@ class MenuState(State):
         self.historyButton.pack()
         self.settingsButton = ttk.Button(self.canvas, text="Configuraciones", command=lambda:self.setNextState("SettingsState"))
         self.settingsButton.pack()
-        self.profileButton = ttk.Button(self.canvas, text="Profile Photo",bootstyle="success-circle") # supposed to be circle but doesnt work for some reason
+        self.profileButton = ttk.Button(self.canvas, text="Profile Photo",bootstyle="success")
         self.profileButton.pack()
 
         #setting position on canvas
