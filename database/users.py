@@ -18,7 +18,7 @@ def new_user(username, password, privilege=1) -> None:
         cursor = conn.cursor()
         try:
             password = hash_password(password)
-            cursor.execute("INSERT IF NOT EXISTS INTO USERS (username, password, privilege) VALUES (?, ?, ?)", (username, password, privilege))
+            cursor.execute("INSERT INTO USERS (username, password, privilege) VALUES (?, ?, ?)", (username, password, privilege))
             conn.commit()
         except Exception:
             return
@@ -47,3 +47,4 @@ def user_login(username, password) -> bool:
 
         except Exception:
             return False
+

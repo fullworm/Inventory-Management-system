@@ -48,6 +48,10 @@ class ModifyProductPopup(QueryDialog):
         self.quantity_entry = ttk.Entry(master)
         self.quantity_entry.pack(fill="x", pady=5)
 
+        ttk.Label(master, text="Precio").pack(fill="x", pady=5)
+        self.price_entry = ttk.Entry(master)
+        self.price_entry.pack(fill="x", pady=5)
+
         self._toplevel.update_idletasks()
         self._toplevel.place_window_center()
 
@@ -67,22 +71,25 @@ class ModifyProductPopup(QueryDialog):
             command=self.on_cancel,
         ).pack(side="right", padx=5)
 
-        box.place(relx=0.5, rely=0.7, anchor="center")
+        box.place(relx=0.5, rely=0.915, anchor="center")
 
 
     def on_submit(self, *_):
-
         try:
             product = self.menuSelect.cget("text")
             quantity = int(self.quantity_entry.get())
-            if quantity <= 0:
+            price = float(self.price_entry.get())
+            if quantity < 0:
                 raise ValueError("Quantity must be positive")
+            if price < 0:
+                raise ValueError("Price must be positive")
             if product == "Select Product":
                 raise ValueError("Please select a product")
 
             self._result = {
                 "product": product,
-                "quantity": quantity
+                "quantity": quantity,
+                "price": price
             }
             ModifyProductPopup._instance_count -= 1
             self._toplevel.destroy()

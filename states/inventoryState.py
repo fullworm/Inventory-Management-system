@@ -3,7 +3,9 @@ from states import constants as c
 import ttkbootstrap as ttk
 from ttkbootstrap.tableview import Tableview
 from ttkbootstrap.constants import *
-from states.Popup import product_modification_popup as adp
+from states.Popup import product_modification as adp
+from states.Popup import add_new_product as anp
+from database.database_func import get_db_connection
 
 class InventoryState(State):
     def __init__(self, window):
@@ -51,22 +53,25 @@ class InventoryState(State):
         self.backButton = ttk.Button(self.canvas, text="Regresar", command=lambda:self.setNextState("MenuState"))
         self.backButton.pack()
 
+        self.AddNewButton = ttk.Button(self.canvas, text="Crear Nuevo Producto", command=lambda:self.add_new())
+
 
         #widget positions
         self.backButton.place(x=10, y=10, anchor="nw")
         self.addButton.place(relx=0.05,rely=0.2, anchor="nw")
         self.removeButton.place(relx=0.2, rely=0.2, anchor="nw")
+        self.AddNewButton.place(relx=0.35, rely=0.2, anchor="nw")
 
         self.canvas.pack(fill='both', expand=YES)
 
     def modify_inventory(self, add:bool, title):
-
+        #TODO: price is now being modified so remember to work that into this function tommorow
         if adp.ModifyProductPopup.get_count() > 0:
             return
 
         existing_products = [row[0] for row in self.rowdata]
 
-        popup = adp.ModifyProductPopup(self.canvas, products=existing_products, name=title)
+        popup = adp.ModifyProductPopup(self.window, products=existing_products, name=title)
 
         if popup.result is None:
             return
@@ -90,6 +95,53 @@ class InventoryState(State):
 
 
         return
+
+    def add_new(self):
+        if anp.AddNewProduct.get_count() > 0:
+            return
+
+        existing_products = [row[0] for row in self.rowdata]
+        popup = anp.AddNewProduct(self.window,name="Crear Producto Nuevo", products=existing_products)
+        result = popup.result
+
+        if popup.result is None:
+            return
+
+        self.rowdata.append([result["name"], result["quantity"], result["price"], result["type"]])
+
+        self.InventoryTable.build_table_data(self.coldata, self.rowdata)
+
+        return
+
+    def update_database(self):
+        with get_db_connection() as db:
+            cursor = db.cursor()
+            for p in self.rowdata:
+                cursor.excute("SELECT EXISTS (SELECT 1 FROM INVENTORY WHERE product=?)", (p[0]))
+                #prices are multiplied by 100 to keep them stored in the db as an integer
+                if cursor.fetchone()[0] == 1:
+                    cursor.execute("UPDATE INVENTORY SET amount = ?, price = ? WHERE product = ?", (p[1], p[2]*100, p[0]))
+                else:
+                    #product thats been added and doesnt exist in the db yet
+                    cursor.execute('INSERT INTO INVENTORY VALUES (?, ?, ?)', (p[0], p[1], p[2]*100, p[3]))
+
+        db.commit()
+
+    @staticmethod
+    def load_products():
+        new = []
+        with get_db_connection() as db:
+            cursor = db.cursor()
+            for row in cursor.execute("SELECT * FROM INVENTORY"):
+                if row:
+                    #price divided by 100 because it was stored as an integer by multiplying by 100
+                    new.append([row[0], row[1], float(row[2])/100, row[3]])
+
+        return new
+
+
+
+
 
 
 
