@@ -1,11 +1,10 @@
 from states.state import State
-from states import constants as c
 import ttkbootstrap as ttk
 from ttkbootstrap.tableview import Tableview
 from ttkbootstrap.constants import *
 from states.Popup import product_modification as adp
 from states.Popup import add_new_product as anp
-from database.database_func import get_db_connection
+import states.const as c
 
 class InventoryState(State):
     def __init__(self, window):
@@ -78,6 +77,8 @@ class InventoryState(State):
 
         product = popup.result["product"]
         quantity = popup.result["quantity"]
+        price = popup.result["price"]
+
 
         # Update product table
         for p in self.rowdata:
@@ -89,6 +90,9 @@ class InventoryState(State):
                         p[1] = 0
                     else:
                         p[1] -= quantity
+                if price:
+                    p[2] = price
+
         self.InventoryTable.build_table_data(
             self.coldata, self.rowdata
         )
@@ -126,20 +130,6 @@ class InventoryState(State):
                     cursor.execute('INSERT INTO INVENTORY VALUES (?, ?, ?)', (p[0], p[1], p[2]*100, p[3]))
 
         db.commit()
-
-    @staticmethod
-    def load_products():
-        new = []
-        with get_db_connection() as db:
-            cursor = db.cursor()
-            for row in cursor.execute("SELECT * FROM INVENTORY"):
-                if row:
-                    #price divided by 100 because it was stored as an integer by multiplying by 100
-                    new.append([row[0], row[1], float(row[2])/100, row[3]])
-
-        return new
-
-
 
 
 

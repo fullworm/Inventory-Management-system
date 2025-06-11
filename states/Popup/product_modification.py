@@ -24,6 +24,7 @@ class ModifyProductPopup(QueryDialog):
 
         self._toplevel.resizable(False, False)
         self._toplevel.protocol("WM_DELETE_WINDOW", self.on_cancel)
+        self.master.bind("<Escape>", self.on_cancel)
         master.configure(width=400, height=300)
 
         master.pack_propagate(False)  # Prevent the frame from shrinking
@@ -78,11 +79,14 @@ class ModifyProductPopup(QueryDialog):
         try:
             product = self.menuSelect.cget("text")
             quantity = int(self.quantity_entry.get())
-            price = float(self.price_entry.get())
+            if self.price_entry.get() == "":
+                price = -1
+            else:
+                price = float(self.price_entry.get())
+
+
             if quantity < 0:
                 raise ValueError("Quantity must be positive")
-            if price < 0:
-                raise ValueError("Price must be positive")
             if product == "Select Product":
                 raise ValueError("Please select a product")
 

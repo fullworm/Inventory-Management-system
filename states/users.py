@@ -1,6 +1,5 @@
-import sqlite3
 import bcrypt as bc
-from database import database_func as db
+from states import database_func as db
 
 
 def validate_password(password:str) -> bool:
@@ -47,4 +46,5 @@ def user_login(username, password) -> bool:
 
         except Exception:
             return False
+
 

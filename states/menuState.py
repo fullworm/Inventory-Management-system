@@ -2,8 +2,8 @@
 
 from states.state import State
 import ttkbootstrap as ttk
-from ttkbootstrap.constants import *
-from states import constants as c
+from states import const as c
+
 
 class MenuState(State):
     def __init__(self,window):

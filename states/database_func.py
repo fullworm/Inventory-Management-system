@@ -1,17 +1,15 @@
 import sqlite3
 import os
 from contextlib import contextmanager
-from states import constants as c
-
+import const as c
 @contextmanager
 def get_db_connection():
-    os.makedirs(os.path.dirname(c.DATABASE_PATH), exist_ok=True)
     conn = sqlite3.connect(c.DATABASE_PATH)
-
     try:
         yield conn
     finally:
         conn.close()
+
 
 
 
@@ -20,7 +18,7 @@ def setup_database():
     if os.path.exists(c.DATABASE_PATH):
         os.remove(c.DATABASE_PATH)
 
-    with get_db_connection() as conn:  # Added parentheses here
+    with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute('PRAGMA foreign_keys = ON')
 
@@ -31,7 +29,7 @@ def setup_database():
                               password  TEXT                              not null,
                               privilege INTEGER
                           )''')
-
+        #remember that prices are multiplied by 100 to store them as an integer
         cursor.execute('''CREATE TABLE IF NOT EXISTS INVENTORY
                           (
                               id           INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -68,12 +66,12 @@ def view_tables():
 def reset_database():
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("DROP TABLE IF EXISTS Users;")
+        cursor.execute("DROP TABLE IF EXISTS USERS;")
         cursor.execute("DROP TABLE IF EXISTS INVENTORY;")
         cursor.execute("DROP TABLE IF EXISTS ORDERS;")
         cursor.execute("DROP TABLE IF EXISTS ORDER_ITEMS;")
-        cursor.commit()
-
+        conn.commit()
+    setup_database()
 
 def print_users():
     with get_db_connection() as conn:
@@ -81,4 +79,47 @@ def print_users():
         cursor.execute("SELECT * FROM USERS")
         users = cursor.fetchall()
         print("Users in database:", users)
+
+
+def create_test_data_inv():
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO INVENTORY (product_name, amount, price, type) VALUES (?,?,?,?)", ("pan", 100, 100, "food"))
+        cursor.execute("INSERT INTO INVENTORY (product_name, amount, price, type) VALUES (?,?,?,?)", ("tomato", 100, 100, "food"))
+        cursor.execute("INSERT INTO INVENTORY (product_name, amount, price, type) VALUES (?,?,?,?)", ("sandwich", 100, 100, "food"))
+        cursor.execute("INSERT INTO INVENTORY (product_name, amount, price, type) VALUES (?,?,?,?)", ("mofongo", 100, 100, "food"))
+        conn.commit()
+        for v in cursor.execute("SELECT * FROM INVENTORY").fetchall():
+            print(v)
+def table_read():
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM INVENTORY")
+        tables = cursor.fetchall()
+        print("Tables in database:", tables)
+
+def load_products():
+        with get_db_connection() as db:
+            new = []
+            cursor = db.cursor()
+            cursor.execute("SELECT * FROM INVENTORY")
+            tables = cursor.fetchall()
+            for row in tables:
+                if row:
+                    #price divided by 100 because it was stored as an integer by multiplying by 100
+                    new.append([row[1], row[2], float(row[3])/100, row[4]])
+
+            return new
+create_test_data_inv()
+
+
+
+
+
+
+
+
+
+
+
 
