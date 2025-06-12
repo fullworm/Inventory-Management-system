@@ -2,7 +2,7 @@
 
 from states.state import State
 import ttkbootstrap as ttk
-from states import const as c
+import const as c
 
 
 class MenuState(State):

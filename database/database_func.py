@@ -1,10 +1,12 @@
 import sqlite3
 import os
 from contextlib import contextmanager
-import const as c
+
+
+DATABASE_PATH = "database.sql"
 @contextmanager
 def get_db_connection():
-    conn = sqlite3.connect(c.DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH)
     try:
         yield conn
     finally:
@@ -15,8 +17,8 @@ def get_db_connection():
 
 def setup_database():
     # Delete the old database file if it exists
-    if os.path.exists(c.DATABASE_PATH):
-        os.remove(c.DATABASE_PATH)
+    if os.path.exists(DATABASE_PATH):
+        os.remove(DATABASE_PATH)
 
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -88,7 +90,7 @@ def create_test_data_inv():
         cursor.execute("INSERT INTO INVENTORY (product_name, amount, price, type) VALUES (?,?,?,?)", ("tomato", 100, 100, "food"))
         cursor.execute("INSERT INTO INVENTORY (product_name, amount, price, type) VALUES (?,?,?,?)", ("sandwich", 100, 100, "food"))
         cursor.execute("INSERT INTO INVENTORY (product_name, amount, price, type) VALUES (?,?,?,?)", ("mofongo", 100, 100, "food"))
-        conn.commit()
+        conn.commit()  # Add this line to commit the changes
         for v in cursor.execute("SELECT * FROM INVENTORY").fetchall():
             print(v)
 def table_read():
@@ -110,9 +112,21 @@ def load_products():
                     new.append([row[1], row[2], float(row[3])/100, row[4]])
 
             return new
-create_test_data_inv()
+        
+def update_products(rowdata):
+        with get_db_connection() as db:
+            cursor = db.cursor()
+            for p in rowdata:
+                name = p[0]
+                cursor.execute("SELECT COUNT(*) FROM INVENTORY WHERE product_name = ?", (name,))
+                #prices are multiplied by 100 to keep them stored in the db as an integer
+                if cursor.fetchone()[0] > 0:
+                    cursor.execute("UPDATE INVENTORY SET amount = ?, price = ? WHERE product_name = ?", (p[1], p[2]*100, name))
+                else:
+                    #product thats been added and doesnt exist in the db yet
+                    cursor.execute('INSERT INTO INVENTORY (product_name, amount, price, type)VALUES (?, ?, ?, ?)', (name, p[1], p[2]*100, p[3]))
 
-
+            db.commit()
 
 
 

@@ -4,8 +4,8 @@ from ttkbootstrap.constants import *
 from states import loginState
 from states import menuState
 from states import inventoryState
-from states import const as c
-from states import database_func as db
+import const as c
+from database import database_func as db
 
 class App:
     def __init__(self, master):
@@ -52,7 +52,7 @@ class App:
 
 
 if __name__ == "__main__":
-    if not os.path.exists(c.DATABASE_PATH):
+    if not os.path.exists(db.DATABASE_PATH):
         db.setup_database()
 
     app = ttk.Window(themename="solar")

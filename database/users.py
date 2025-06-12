@@ -1,5 +1,5 @@
 import bcrypt as bc
-from states import database_func as db
+from database.database_func import get_db_connection
 
 
 def validate_password(password:str) -> bool:
@@ -13,7 +13,7 @@ def hash_password(password:str) -> hex:
     return hashed
 
 def new_user(username, password, privilege=1) -> None:
-    with db.get_db_connection() as conn:
+    with get_db_connection() as conn:
         cursor = conn.cursor()
         try:
             password = hash_password(password)
@@ -23,7 +23,7 @@ def new_user(username, password, privilege=1) -> None:
             return
 
 def delete_user(username:str) -> None:
-    with db.get_db_connection() as conn:
+    with get_db_connection() as conn:
         cursor = conn.cursor()
         try:
             cursor.execute("DELETE FROM USERS WHERE username = ?", (username,))
@@ -32,7 +32,7 @@ def delete_user(username:str) -> None:
             return
 
 def user_login(username, password) -> bool:
-    with db.get_db_connection() as conn:
+    with get_db_connection() as conn:
         cursor = conn.cursor()
         try:
             cursor.execute("SELECT password FROM USERS WHERE username = ?", (username,))
@@ -46,5 +46,4 @@ def user_login(username, password) -> bool:
 
         except Exception:
             return False
-
 

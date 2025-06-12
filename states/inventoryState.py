@@ -4,8 +4,10 @@ from ttkbootstrap.tableview import Tableview
 from ttkbootstrap.constants import *
 from states.Popup import product_modification as adp
 from states.Popup import add_new_product as anp
-import states.const as c
-
+import const as c
+from database.database_func import get_db_connection
+from database.database_func import load_products
+from database.database_func import update_products
 class InventoryState(State):
     def __init__(self, window):
         super().__init__("InventoryState", None)
@@ -13,19 +15,14 @@ class InventoryState(State):
         self.canvas = ttk.Canvas(self.window, width=c.WIDTH, height=c.HEIGHT)
         self.colors = self.window.style.colors
 
-        #test data
+
         self.coldata = [
             {"text": "Nombre de Producto", "stretch":True},
             {"text": "Cantidad", "stretch":True},
             {"text": "Precio", "stretch":True},
             {"text": "Tipo", "stretch":True}
         ]
-        self.rowdata = [
-            ["pan", 10, 100, "food"],
-            ["potato", 20, 200, "food"],
-            ["tomato", 30, 300, "food"],
-            ["sandwich", 69, 420, "food"]
-        ]
+        self.rowdata = load_products()
 
         #displays the inventory in a table
         self.table_frame = ttk.Frame(self.canvas)
@@ -38,7 +35,8 @@ class InventoryState(State):
             rowdata=self.rowdata,
             yscrollbar=True,
             stripecolor=(self.colors.active, None),
-            height=20
+            height=20, 
+            autoalign=False
         )
         self.InventoryTable.pack(fill="x", expand=True)
 
@@ -97,6 +95,7 @@ class InventoryState(State):
             self.coldata, self.rowdata
         )
 
+        update_products(self.rowdata)
 
         return
 
@@ -115,21 +114,10 @@ class InventoryState(State):
 
         self.InventoryTable.build_table_data(self.coldata, self.rowdata)
 
+        update_products(self.rowdata)
+
         return
 
-    def update_database(self):
-        with get_db_connection() as db:
-            cursor = db.cursor()
-            for p in self.rowdata:
-                cursor.excute("SELECT EXISTS (SELECT 1 FROM INVENTORY WHERE product=?)", (p[0]))
-                #prices are multiplied by 100 to keep them stored in the db as an integer
-                if cursor.fetchone()[0] == 1:
-                    cursor.execute("UPDATE INVENTORY SET amount = ?, price = ? WHERE product = ?", (p[1], p[2]*100, p[0]))
-                else:
-                    #product thats been added and doesnt exist in the db yet
-                    cursor.execute('INSERT INTO INVENTORY VALUES (?, ?, ?)', (p[0], p[1], p[2]*100, p[3]))
-
-        db.commit()
 
 
 

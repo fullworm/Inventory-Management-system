@@ -1,6 +1,7 @@
+from database import users as u
 from states.state import State
 import ttkbootstrap as ttk
-from states import users as u, const as c
+import const as c
 from tkinter import messagebox
 
 class loginState(State):
