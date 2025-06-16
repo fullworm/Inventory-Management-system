@@ -14,7 +14,7 @@ class MenuState(State):
         #Buttons
         self.inventoryButton = ttk.Button(self.canvas, text="Inventario", command=lambda:self.setNextState("InventoryState"))
         self.inventoryButton.pack()
-        self.orderButton = ttk.Button(self.canvas, text="Ordenes", command=lambda:self.setNextState("OrderState"))
+        self.orderButton = ttk.Button(self.canvas, text="Ordenes", command=lambda:self.setNextState("SaleState"))
         self.orderButton.pack()
         self.historyButton = ttk.Button(self.canvas, text="Historial", command=lambda:self.setNextState("HistoryState"))
         self.historyButton.pack()

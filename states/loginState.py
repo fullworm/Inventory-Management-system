@@ -55,7 +55,7 @@ class loginState(State):
             return
         try:
             if u.user_login(username, password):
-                self.next_state = "MenuState"
+                self.setNextState("MenuState")
             else:
                 messagebox.showerror("Error", "Invalid username or password")
                 self.passwordEntry.delete(0, 'end')  # Clear password field

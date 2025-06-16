@@ -44,7 +44,10 @@ def setup_database():
         cursor.execute('''CREATE TABLE IF NOT EXISTS ORDERS
                           (
                               id      INTEGER PRIMARY KEY AUTOINCREMENT,
-                              user_id INTEGER
+                              user_id INTEGER,
+                              finished BOOLEAN default 0,
+                              date    TEXT    not null,
+                              FOREIGN KEY (user_id) REFERENCES USERS (id)
                           )''')
 
         cursor.execute('''CREATE TABLE IF NOT EXISTS ORDER_ITEMS
@@ -100,33 +103,6 @@ def table_read():
         tables = cursor.fetchall()
         print("Tables in database:", tables)
 
-def load_products():
-        with get_db_connection() as db:
-            new = []
-            cursor = db.cursor()
-            cursor.execute("SELECT * FROM INVENTORY")
-            tables = cursor.fetchall()
-            for row in tables:
-                if row:
-                    #price divided by 100 because it was stored as an integer by multiplying by 100
-                    new.append([row[1], row[2], float(row[3])/100, row[4]])
-
-            return new
-        
-def update_products(rowdata):
-        with get_db_connection() as db:
-            cursor = db.cursor()
-            for p in rowdata:
-                name = p[0]
-                cursor.execute("SELECT COUNT(*) FROM INVENTORY WHERE product_name = ?", (name,))
-                #prices are multiplied by 100 to keep them stored in the db as an integer
-                if cursor.fetchone()[0] > 0:
-                    cursor.execute("UPDATE INVENTORY SET amount = ?, price = ? WHERE product_name = ?", (p[1], p[2]*100, name))
-                else:
-                    #product thats been added and doesnt exist in the db yet
-                    cursor.execute('INSERT INTO INVENTORY (product_name, amount, price, type)VALUES (?, ?, ?, ?)', (name, p[1], p[2]*100, p[3]))
-
-            db.commit()
 
 
 
