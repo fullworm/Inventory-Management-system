@@ -43,19 +43,20 @@ def setup_database():
 
         cursor.execute('''CREATE TABLE IF NOT EXISTS ORDERS
                           (
-                              id      INTEGER PRIMARY KEY AUTOINCREMENT,
-                              user_id INTEGER,
+                              id       INTEGER PRIMARY KEY AUTOINCREMENT,
+                              name     TEXT not null,
                               finished BOOLEAN default 0,
-                              date    TEXT    not null,
-                              FOREIGN KEY (user_id) REFERENCES USERS (id)
+                              date     TEXT    not null
                           )''')
 
         cursor.execute('''CREATE TABLE IF NOT EXISTS ORDER_ITEMS
                           (
-                              id           INTEGER PRIMARY KEY AUTOINCREMENT,
-                              order_id     INTEGER not null,
-                              product_name TEXT    not null,
-                              FOREIGN KEY (order_id) REFERENCES ORDERS (id)
+                              id INTEGER PRIMARY KEY AUTOINCREMENT,
+                              order_id INTEGER,
+                              product_name TEXT,
+                              quantity INTEGER,
+                              price REAL,
+                              FOREIGN KEY(order_id) REFERENCES orders(id)
                           )''')
 
         conn.commit()

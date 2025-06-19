@@ -15,7 +15,6 @@ class App:
         self.master = master
         self.master.title("Manejador de inventario y ordenes")
 
-
         self.current_canvas = ""
         self.show_canvas("LoginState")
 
@@ -24,7 +23,6 @@ class App:
         # Hide current state if exists
         if self.current_canvas:
             self.current_canvas.canvas.pack_forget()
-
         if state_name == "LoginState":
             self.current_canvas = loginState.loginState(self.master)
         elif state_name == "MenuState":
