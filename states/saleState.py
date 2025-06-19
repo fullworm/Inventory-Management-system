@@ -65,8 +65,8 @@ class SaleState(State):
         self.prodData = result['prod']
         self.pendingOrders.insert('', 'end', values=(
             result['Order_name'], 
-            '', 
-            '', 
+            '        ', 
+            '        ', 
             result['total'], 
             result['date']
             ), 
@@ -74,8 +74,8 @@ class SaleState(State):
             tags=(tag,)
         )
         for i, row in enumerate(result['data']):
-            tag = 'evenrow' if i % 2 == 0 else 'oddrow'
-            self.pendingOrders.insert(f'{self.idN}', 'end', values=('', row[0], row[1], row[2]))
+            child_tag = 'evenrow' if (self.idN + i + 1) % 2 == 0 else 'oddrow'
+            self.pendingOrders.insert(f'{self.idN}', 'end', values=('', row[0], row[1], row[2]), tags=(child_tag,))
         self.idN += 1
 
     def on_right_click(self, event):
