@@ -5,17 +5,21 @@ from ttkbootstrap.dialogs import Messagebox
 
 class AddOrder(QueryDialog):
     _instance_count = 0
-    def __init__(self, window, title, products = [], prodData = {}):
+    def __init__(self, window, title, products:list[str], prodData:dict, editData = [], edit=False):
         AddOrder._instance_count += 1
         super().__init__(parent=window, prompt=title)
         self.products = products
         self.prodData = prodData
+        self.edit = edit
         self.coldata = [
             {"text": "Nombre de Producto", "stretch":True},
             {"text": "Cantidad", "stretch":True},
             {"text": "Precio", "stretch":True}
         ]
-        self.rowdata = []
+        if edit:
+            self.rowdata = editData.copy()
+        else:
+            self.rowdata = []
 
         self.show()
 
@@ -74,6 +78,11 @@ class AddOrder(QueryDialog):
             amountformat='{:.2f}'
         )
         self.priceMeter.pack(anchor='center')
+        
+        if self.edit:
+            tVal = sum([float(row[2]) for row in self.rowdata])     
+            self.priceMeter.configure(amountused=tVal)
+
 
         right_frame.place(relx=0.6, rely=0.15)
         left_frame.place(relx=0)
@@ -82,15 +91,17 @@ class AddOrder(QueryDialog):
         self._toplevel.place_window_center()
 
     def create_buttonbox(self, master):
-        frame = ttk.Frame(master)
+        frame = ttk.LabelFrame(master, text='Funciones')
         frame.pack(fill="x", padx=5, pady=5)
         ttk.Button(frame, text="Add", command=lambda:self.add_prod()).pack(side="left", padx=5, pady=5)
+
+        ttk.Button(frame, text="Quitar ultimo", command=lambda:self.remove_last()).pack(side="left", padx=5, pady=5)
 
         ttk.Button(frame, text="Completar Orden", command=lambda:self.on_submit()).pack(side="left", padx=5, pady=5)
 
         ttk.Button(frame, text="Cancelar Orden", command=lambda:self.on_cancel()).pack(side="left", padx=5, pady=5)
 
-        frame.place(relx=0.2, rely= 0.9)
+        frame.place(relx=0.05, rely= 0.9)
         
     def on_submit(self, *_):
         AddOrder._instance_count -= 1
@@ -112,6 +123,22 @@ class AddOrder(QueryDialog):
             self.apply()
         except ValueError as e:
             Messagebox.show_error(self.master, message=e, title='Error!')
+
+    def remove_last(self):
+        try:
+            last = self.rowdata.pop()
+
+            if not last:
+                raise IndexError("No hay productos para quitar.")
+
+            self.prodData[last[0]][0] += last[1]
+
+            tVal = sum([row[2] for row in self.rowdata])     
+            self.priceMeter.configure(amountused=tVal)
+
+            self.saleProducts.build_table_data(self.coldata, self.rowdata)
+        except IndexError as e:
+            Messagebox.show_error(parent=self.master, title='Error!', message=e)
 
         
     def on_cancel(self, *_):

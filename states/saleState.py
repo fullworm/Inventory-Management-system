@@ -17,7 +17,7 @@ class SaleState(State):
         self.idN = 0
 
         self.context_menu = ttk.Menu(self.window, tearoff=0)
-        self.context_menu.add_command(label="Edit")
+        self.context_menu.add_command(label="Edit", command=lambda:self.edit_order())
         self.context_menu.add_command(label="Delete", command=lambda: self.remove_order())
         
         self.pendingOrders = ttk.Treeview(self.canvas, columns=("Nombre de orden","Producto", "Cantidad", "Precio", "Fecha de entrega"), show="headings")
@@ -59,20 +59,27 @@ class SaleState(State):
     def add_order(self):
         if ao.AddOrder.get_count() > 0:
             return
+        
         popup = ao.AddOrder(self.window, "Agregar Orden", list(self.prodData.keys()), deepcopy(self.prodData))
         result = popup.result
+
+        if not result:
+            return
+        
         tag = 'evenrow' if self.idN % 2 == 0 else 'oddrow'
         self.prodData = result['prod']
+
         self.pendingOrders.insert('', 'end', values=(
             result['Order_name'], 
-            '        ', 
-            '        ', 
+            '', 
+            '', 
             result['total'], 
             result['date']
             ), 
             iid=self.idN,
             tags=(tag,)
         )
+
         for i, row in enumerate(result['data']):
             child_tag = 'evenrow' if (self.idN + i + 1) % 2 == 0 else 'oddrow'
             self.pendingOrders.insert(f'{self.idN}', 'end', values=('', row[0], row[1], row[2]), tags=(child_tag,))
@@ -94,11 +101,40 @@ class SaleState(State):
             order_id = item[0]
             
             # add stock to products on canceled order
-            for id in self.pendingOrders.get_children(f'{order_id}'):
+            for id in self.pendingOrders.get_children(order_id):
                 prod = self.pendingOrders.item(id, 'values')
                 quantity = int(prod[2])
                 self.prodData[prod[1]][0] += quantity
             self.pendingOrders.delete(order_id)
+            
+    def edit_order(self):
+        item = self.pendingOrders.selection()
+        if item:
+            order_id = item[0]
+
+            child_items = []
+            for id in self.pendingOrders.get_children(order_id):
+                print(list(self.pendingOrders.item(id, 'values'))[1:4])
+                child_items.append(list(self.pendingOrders.item(id, 'values'))[1:4])
+            popup = ao.AddOrder(self.window, "Agregar Orden", list(self.prodData.keys()), deepcopy(self.prodData), editData=child_items, edit=True)
+            result = popup.result
+
+            if not result:
+                return
+        
+            self.prodData = result['prod']
+
+            self.pendingOrders.item(order_id, values=(
+                result['Order_name'], 
+                '', 
+                '', 
+                result['total'], 
+                result['date']
+                )
+            )
+
+            for i, row in enumerate(result['data']):
+                self.pendingOrders.item(order_id, values=('', row[0], row[1], row[2]))
 
             
         
