@@ -80,8 +80,7 @@ class AddOrder(QueryDialog):
         self.priceMeter.pack(anchor='center')
         
         if self.edit:
-            tVal = sum([float(row[2]) for row in self.rowdata])     
-            self.priceMeter.configure(amountused=tVal)
+            self.update_meter()
 
 
         right_frame.place(relx=0.6, rely=0.15)
@@ -128,17 +127,13 @@ class AddOrder(QueryDialog):
         try:
             last = self.rowdata.pop()
 
-            if not last:
-                raise IndexError("No hay productos para quitar.")
+            self.prodData[last[0]][0] += int(last[1])
 
-            self.prodData[last[0]][0] += last[1]
-
-            tVal = sum([row[2] for row in self.rowdata])     
-            self.priceMeter.configure(amountused=tVal)
+            self.update_meter()
 
             self.saleProducts.build_table_data(self.coldata, self.rowdata)
-        except IndexError as e:
-            Messagebox.show_error(parent=self.master, title='Error!', message=e)
+        except IndexError:
+            Messagebox.show_error(parent=self.master, title='Error!', message="No hay productos para quitar.")
 
         
     def on_cancel(self, *_):
@@ -170,9 +165,7 @@ class AddOrder(QueryDialog):
             self.rowdata.append([name, quantity, price*float(quantity)])
 
             self.saleProducts.build_table_data(self.coldata, self.rowdata)
-            tVal = sum([row[2] for row in self.rowdata])
-            
-            self.priceMeter.configure(amountused=tVal)
+            self.update_meter()
         except ValueError as e:
             Messagebox.show_error(parent=self.master, title="Error!", message=f'{e}')
     def getTprice(self):
@@ -180,7 +173,9 @@ class AddOrder(QueryDialog):
         for key in self.prodData.keys():
             sum += self.prodData[key][0] * self.prodData[key][1] # amount * price
         return sum
-
+    def update_meter(self):
+        tVal = sum([float(row[2]) for row in self.rowdata])
+        self.priceMeter.configure(amountused=tVal)
         
 
     @classmethod

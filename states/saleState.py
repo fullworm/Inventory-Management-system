@@ -133,8 +133,19 @@ class SaleState(State):
                 )
             )
 
-            for i, row in enumerate(result['data']):
-                self.pendingOrders.item(order_id, values=('', row[0], row[1], row[2]))
+        # First, delete existing child items
+        for child_id in self.pendingOrders.get_children(order_id):
+            self.pendingOrders.delete(child_id)
+        
+        # Then, insert new child items
+        for i, row in enumerate(result['data']):
+            child_tag = 'evenrow' if (int(order_id) + i + 1) % 2 == 0 else 'oddrow'
+            self.pendingOrders.insert(
+                order_id,
+                'end',
+                values=('', row[0], row[1], row[2]),
+                tags=(child_tag,)
+            )
 
             
         

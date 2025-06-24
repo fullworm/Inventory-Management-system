@@ -4,6 +4,7 @@ from ttkbootstrap.tableview import Tableview
 from ttkbootstrap.constants import *
 from states.Popup import product_modification as adp
 from states.Popup import add_new_product as anp
+from states.Popup import remove_prod as rdb
 import const as c
 from database.database_func import get_db_connection
 class InventoryState(State):
@@ -12,7 +13,6 @@ class InventoryState(State):
         self.window = window
         self.canvas = ttk.Canvas(self.window, width=c.WIDTH, height=c.HEIGHT)
         self.colors = self.window.style.colors
-        
 
 
         self.coldata = [
@@ -34,22 +34,21 @@ class InventoryState(State):
             rowdata=self.rowdata,
             yscrollbar=True,
             stripecolor=(self.colors.active, None),
-            height=20, 
-            autoalign=False
+            height=20,
+            autoalign=False,
+            pagesize=20
         )
-        self.InventoryTable.pack(fill="x", expand=True)
+        self.InventoryTable.pack(fill=BOTH, expand=True)
 
-        self.addButton = ttk.Button(self.canvas, text="Agregar/Aumentar Producto", command=lambda:self.modify_inventory(True, "Agregar Producto"))
-        self.addButton.pack()
+        self.addButton = ttk.Button(self.canvas, text="Agregar/Aumentar Producto", command=lambda:self.modify_inventory(True, "Agregar Producto")) 
 
         self.removeButton = ttk.Button(self.canvas, text="Quitar/Disminuir producto", command=lambda:self.modify_inventory(False, "Remover Producto"))
-        self.removeButton.pack()
-
 
         self.backButton = ttk.Button(self.canvas, text="Regresar", command=lambda:self.setNextState("MenuState"))
-        self.backButton.pack()
-
+    
         self.AddNewButton = ttk.Button(self.canvas, text="Crear Nuevo Producto", command=lambda:self.add_new())
+
+        self.RemoveProdPerm = ttk.Button(self.canvas, text='Borrar producto', command=lambda:self.delete_prod())
 
 
         #widget positions
@@ -57,11 +56,11 @@ class InventoryState(State):
         self.addButton.place(relx=0.05,rely=0.2, anchor="nw")
         self.removeButton.place(relx=0.2, rely=0.2, anchor="nw")
         self.AddNewButton.place(relx=0.35, rely=0.2, anchor="nw")
+        self.RemoveProdPerm.place(relx=0.5, rely=0.2, anchor='nw')
 
-        self.canvas.pack(fill='both', expand=YES)
+        self.canvas.pack(fill='both', expand=True)
 
     def modify_inventory(self, add:bool, title):
-        #TODO: price is now being modified so remember to work that into this function tommorow
         if adp.ModifyProductPopup.get_count() > 0:
             return
 
@@ -97,7 +96,7 @@ class InventoryState(State):
         self.update_products(self.rowdata)
 
         return
-
+    
     def add_new(self):
         if anp.AddNewProduct.get_count() > 0:
             return
@@ -116,6 +115,23 @@ class InventoryState(State):
         self.update_products(self.rowdata)
 
         return
+    
+    def delete_prod(self):
+        if rdb.removeDb.get_count() > 0:
+            return
+        popup = rdb.removeDb(self.window, title='Borrar producto', products=[row[0] for row in self.rowdata])
+        result = popup.result
+
+        with get_db_connection() as db:
+            cursor = db.cursor()
+            cursor.execute(f'DELETE FROM INVENTORY WHERE product_name = {result}')
+            for i in range(len(self.rowdata)):
+                if self.rowdata[i][0] == result:
+                    self.rowdata.pop(i)
+                    self.InventoryTable.build_table_data(self.coldata, self.rowdata)
+            db.commit()
+
+
     @staticmethod
     def load_products():
         with get_db_connection() as db:
@@ -144,12 +160,3 @@ class InventoryState(State):
                     cursor.execute('INSERT INTO INVENTORY (product_name, amount, price, type)VALUES (?, ?, ?, ?)', (name, p[1], p[2]*100, p[3]))
 
             db.commit()
-
-
-
-
-
-
-
-
-
