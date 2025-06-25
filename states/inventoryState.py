@@ -121,16 +121,20 @@ class InventoryState(State):
             return
         popup = rdb.removeDb(self.window, title='Borrar producto', products=[row[0] for row in self.rowdata])
         result = popup.result
+        print(result)
+
+        if not result:
+            return
 
         with get_db_connection() as db:
             cursor = db.cursor()
-            cursor.execute(f'DELETE FROM INVENTORY WHERE product_name = {result}')
+            cursor.execute('DELETE FROM INVENTORY WHERE product_name = ?', (result,))
             for i in range(len(self.rowdata)):
                 if self.rowdata[i][0] == result:
                     self.rowdata.pop(i)
                     self.InventoryTable.build_table_data(self.coldata, self.rowdata)
+                    break
             db.commit()
-
 
     @staticmethod
     def load_products():

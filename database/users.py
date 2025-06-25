@@ -46,4 +46,3 @@ def user_login(username, password) -> bool:
 
         except Exception:
             return False
-

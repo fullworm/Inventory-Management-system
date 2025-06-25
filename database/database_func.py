@@ -46,6 +46,7 @@ def setup_database():
                               id       INTEGER PRIMARY KEY AUTOINCREMENT,
                               name     TEXT not null,
                               finished BOOLEAN default 0,
+                              total_price REAL not null,
                               date     TEXT    not null
                           )''')
 
@@ -60,6 +61,7 @@ def setup_database():
                           )''')
 
         conn.commit()
+    create_test_data_inv()
 
 
 def view_tables():
@@ -103,11 +105,6 @@ def table_read():
         cursor.execute("SELECT * FROM INVENTORY")
         tables = cursor.fetchall()
         print("Tables in database:", tables)
-
-
-
-
-
 
 
 

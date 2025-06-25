@@ -19,6 +19,7 @@ class SaleState(State):
         self.context_menu = ttk.Menu(self.window, tearoff=0)
         self.context_menu.add_command(label="Edit", command=lambda:self.edit_order())
         self.context_menu.add_command(label="Delete", command=lambda: self.remove_order())
+        self.context_menu.add_command(label='Mark Done', command=lambda: self.mark_done())
         
         self.pendingOrders = ttk.Treeview(self.canvas, columns=("Nombre de orden","Producto", "Cantidad", "Precio", "Fecha de entrega"), show="headings")
         self.pendingOrders.heading("Nombre de orden", text="Nombre de orden")
@@ -146,6 +147,47 @@ class SaleState(State):
                 values=('', row[0], row[1], row[2]),
                 tags=(child_tag,)
             )
+    def mark_done(self):
+        item = self.pendingOrders.selection()
+        if item:
+            order_id = item[0]
+
+            parent_val = self.pendingOrders.item(order_id, 'values')
+
+            child_items = []
+            for id in self.pendingOrders.get_children(order_id):
+                print(list(self.pendingOrders.item(id, 'values'))[1:4])
+                child_items.append(list(self.pendingOrders.item(id, 'values'))[1:4])
+
+            with get_db_connection() as db:
+                cursor = db.cursor()
+                cursor.execute(
+                    '''
+                       INSERT INTO ORDERS 
+                       (name, finished, total_price, date) 
+                       VALUES (?,?,?,?)
+                    ''', 
+                       (parent_val[0], 1, float(parent_val[3]), parent_val[4])
+                    )
+                sale_id = cursor.execute(
+                    '''
+                        SELECT id FROM ORDERS WHERE 
+                        name = ? AND total_price = ? AND date = ?
+                    ''', 
+                    (parent_val[0], float(parent_val[3]), parent_val[4])
+                )
+                
+                for item in child_items:
+                    cursor.execute(
+                        '''
+                        INSERT INTO ORDER_ITEMS 
+                        (order_id, product_name, quantity, price) 
+                        VALUES (?,?,?,?)
+                        ''', 
+                        (sale_id, item[1], item[2], float(item[3]))
+                    )
+
+
 
             
         
