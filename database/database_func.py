@@ -31,6 +31,7 @@ def setup_database():
                               password  TEXT                              not null,
                               privilege INTEGER
                           )''')
+        
         #remember that prices are multiplied by 100 to store them as an integer
         cursor.execute('''CREATE TABLE IF NOT EXISTS INVENTORY
                           (
@@ -40,23 +41,23 @@ def setup_database():
                               price        INTEGER not null,
                               type         TEXT    not null
                           )''')
-
+        #remember that prices are multiplied by 100 to store them as an integer
         cursor.execute('''CREATE TABLE IF NOT EXISTS ORDERS
                           (
                               id       INTEGER PRIMARY KEY AUTOINCREMENT,
                               name     TEXT not null,
                               finished BOOLEAN default 0,
-                              total_price REAL not null,
+                              total_price INTEGER not null,
                               date     TEXT    not null
                           )''')
-
+        #remember that prices are multiplied by 100 to store them as an integer
         cursor.execute('''CREATE TABLE IF NOT EXISTS ORDER_ITEMS
                           (
                               id INTEGER PRIMARY KEY AUTOINCREMENT,
                               order_id INTEGER,
                               product_name TEXT,
                               quantity INTEGER,
-                              price REAL,
+                              price INTEGER,
                               FOREIGN KEY(order_id) REFERENCES orders(id)
                           )''')
 

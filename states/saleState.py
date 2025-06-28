@@ -27,6 +27,7 @@ class SaleState(State):
         self.pendingOrders.heading("Cantidad", text="Cantidad")
         self.pendingOrders.heading("Precio", text="Precio")
         self.pendingOrders.heading('Fecha de entrega', text='Fecha de entrega')
+
         for col in self.pendingOrders["columns"]:
             self.pendingOrders.column(col, anchor="center")
             self.pendingOrders.heading(col, anchor="center")
@@ -53,6 +54,7 @@ class SaleState(State):
         # self.cancelButton.place(relx=0.2, rely=0.2, anchor="nw")
 
         self.pendingOrders.bind('<Button-3>', self.on_right_click)
+        self.window.protocol("WM_DELETE_WINDOW", lambda: (self.save_pending_orders(), self.window.destroy()))
         
 
         self.canvas.pack(fill='both', expand=YES)
@@ -94,12 +96,24 @@ class SaleState(State):
             self.pendingOrders.selection_set(item)
             # Show context menu
             self.context_menu.tk_popup(event.x_root, event.y_root)
-            
 
     def remove_order(self):
         item = self.pendingOrders.selection()
         if item:
             order_id = item[0]
+
+            parent_order = self.pendingOrders.item(order_id, 'values')
+            
+            #if removing unfinished order thats already in db
+            with get_db_connection() as db:
+                cursor = db.cursor()
+                row = cursor.execute('SELECT id FROM ORDERS WHERE name = ?', (parent_order[0],)).fetchone()
+                if row:
+                    sale_id = row[0]
+                    cursor.execute('DELETE FROM ORDERS WHERE id = ?', (sale_id,))
+                    cursor.execute('DELETE FROM ORDER_ITEMS WHERE order_id = ?', (sale_id,))
+
+
             
             # add stock to products on canceled order
             for id in self.pendingOrders.get_children(order_id):
@@ -107,6 +121,7 @@ class SaleState(State):
                 quantity = int(prod[2])
                 self.prodData[prod[1]][0] += quantity
             self.pendingOrders.delete(order_id)
+            self.update_stock()
             
     def edit_order(self):
         item = self.pendingOrders.selection()
@@ -134,11 +149,11 @@ class SaleState(State):
                 )
             )
 
-        # First, delete existing child items
+        # delete existing child items
         for child_id in self.pendingOrders.get_children(order_id):
             self.pendingOrders.delete(child_id)
         
-        # Then, insert new child items
+        # insert new child items
         for i, row in enumerate(result['data']):
             child_tag = 'evenrow' if (int(order_id) + i + 1) % 2 == 0 else 'oddrow'
             self.pendingOrders.insert(
@@ -147,6 +162,7 @@ class SaleState(State):
                 values=('', row[0], row[1], row[2]),
                 tags=(child_tag,)
             )
+    
     def mark_done(self):
         item = self.pendingOrders.selection()
         if item:
@@ -156,7 +172,6 @@ class SaleState(State):
 
             child_items = []
             for id in self.pendingOrders.get_children(order_id):
-                print(list(self.pendingOrders.item(id, 'values'))[1:4])
                 child_items.append(list(self.pendingOrders.item(id, 'values'))[1:4])
 
             with get_db_connection() as db:
@@ -167,15 +182,9 @@ class SaleState(State):
                        (name, finished, total_price, date) 
                        VALUES (?,?,?,?)
                     ''', 
-                       (parent_val[0], 1, float(parent_val[3]), parent_val[4])
+                       (parent_val[0], 1, float(parent_val[3])*100, parent_val[4])
                     )
-                sale_id = cursor.execute(
-                    '''
-                        SELECT id FROM ORDERS WHERE 
-                        name = ? AND total_price = ? AND date = ?
-                    ''', 
-                    (parent_val[0], float(parent_val[3]), parent_val[4])
-                )
+                sale_id = cursor.lastrowid
                 
                 for item in child_items:
                     cursor.execute(
@@ -184,16 +193,70 @@ class SaleState(State):
                         (order_id, product_name, quantity, price) 
                         VALUES (?,?,?,?)
                         ''', 
-                        (sale_id, item[1], item[2], float(item[3]))
+                        (sale_id, item[0], int(item[1]), float(item[2])*100)
                     )
-
-
-
-            
+                self.pendingOrders.delete(order_id)
+                self.update_stock()
+                
         
-    @staticmethod
-    def load_pending_orders():
-        ...
+    def load_pending_orders(self):
+        with get_db_connection() as db:
+            cursor = db.cursor()
+            parent_orders = cursor.execute('''SELECT * FROM ORDERS WHERE finished = 0''').fetchall()
+            if parent_orders:
+                for parent in parent_orders:
+                    child_items = cursor.execute('SELECT product_name, quantity, price FROM ORDER_ITEMS WHERE order_id = ?', (parent[0])).fetchall()
+                    self.pendingOrders.insert('', 'end', values=(parent[1], '', '', parent[3]/100, parent[4]), iid=self.idN)
+                    for item in child_items:
+                        self.pendingOrders.insert(self.idN, values = ('', item[0], item[1], item[2]/100, ''))
+                    self.idN += 1
+    
+    def setNextState(self, state):
+        self.save_pending_orders()
+        self.next_state = state
+
+    def save_pending_orders(self):
+        # Put orders that aren't finished in the db
+        with get_db_connection() as db:
+            cursor = db.cursor()
+            parent_ids = self.pendingOrders.get_children('')
+            if parent_ids:
+                for id in parent_ids:
+                    parent_info = self.pendingOrders.item(id, 'values')
+                    # Check for existing unfinished order with the same name
+                    cursor.execute('''SELECT id FROM ORDERS WHERE name = ? AND finished = 0''', (parent_info[0],))
+                    existing_order = cursor.fetchone()
+                    if not existing_order:
+                        cursor.execute(
+                            '''
+                                INSERT INTO ORDERS 
+                                (name, finished, total_price, date) 
+                                VALUES (?,?,?,?)
+                            ''', 
+                            (parent_info[0], 0, float(parent_info[3])*100, parent_info[4]) #price multiplied by 100 because we/i want to store it as an integer
+                        )
+                        sale_id = cursor.lastrowid
+
+                        for child in self.pendingOrders.get_children(id):
+                            child_info = self.pendingOrders.item(child, 'values')
+                            cursor.execute(
+                                '''
+                                INSERT INTO ORDER_ITEMS 
+                                (order_id, product_name, quantity, price) VALUES (?,?,?,?)
+                                ''', 
+                                (sale_id, child_info[1], int(child_info[2]), float(child_info[3])*100) #price multiplied by 100 because we/i want to store it as an integer
+                            )
+            db.commit()
+
+        return 
+
+                cursor.execute('UPDATE INVENTORY SET amount = ? WHERE product_name = ?', (self.prodData[prod][0], prod))
+        with get_db_connection() as db:
+            cursor = db.cursor()
+            for prod in list(self.prodData.keys()):
+                cursor.execute('UPDATE INVENTORY SET amount = ? WHERE name = ?', (self.prodData[prod][0], prod))
+            db.commit()
+
     @staticmethod
     def load_prod():
         new = {}
@@ -206,10 +269,7 @@ class SaleState(State):
             for row in data:
                 new[row[0]] = [row[1], float(row[2])/100, row[3]]
         return new
-    
-    def update_orders(self):
-        ...
 
-        
+
 
 
