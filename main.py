@@ -5,7 +5,6 @@ from states import loginState
 from states import menuState
 from states import inventoryState
 from states import saleState
-from states import historyState
 import const as c
 from database import database_func as db
 

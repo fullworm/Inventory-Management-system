@@ -100,14 +100,6 @@ def create_test_data_inv():
         conn.commit()  # Add this line to commit the changes
         for v in cursor.execute("SELECT * FROM INVENTORY").fetchall():
             print(v)
-def table_read():
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM INVENTORY")
-        tables = cursor.fetchall()
-        print("Tables in database:", tables)
-
-
-
+            
 
 
