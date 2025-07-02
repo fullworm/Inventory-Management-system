@@ -167,8 +167,12 @@ class SaleState(State):
                 order_id = item[0]
 
                 parent = self.pendingOrders.item(order_id, 'values')
-                sale_id = cursor.execute('SELECT id FROM ORDERS WHERE name = ? AND total_price = ? AND date = ?', (parent[0], float(parent[3])*100, parent[4])).fetchone()[0]
-
+                result = cursor.execute(
+                    'SELECT id FROM ORDERS WHERE name = ? AND total_price = ? AND date = ?',
+                    (parent[0], float(parent[3]) * 100, parent[4])
+                ).fetchone()
+                sale_id = result[0] if result else None
+                
                 child_items = []
                 for id in self.pendingOrders.get_children(order_id):
                     child_items.append(list(self.pendingOrders.item(id, 'values'))[1:4])
