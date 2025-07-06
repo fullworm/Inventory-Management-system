@@ -273,21 +273,44 @@ class SaleState(State):
     def load_order_data(self, finished:bool) -> None:
         with get_db_connection() as db:
             cursor = db.cursor()
-            parent_orders = cursor.execute('''SELECT * FROM ORDERS WHERE finished = ?''', (finished,)).fetchall()
+            parent_orders = cursor.execute(
+                '''SELECT * FROM ORDERS WHERE finished = ?''',
+                (finished,)
+            ).fetchall()
             if parent_orders:
-                if finished:
+                if not finished:  # Load pending orders
                     for parent in parent_orders:
-                        order_items = cursor.execute('SELECT product_name, quantity, price FROM ORDER_ITEMS WHERE order_id = ?', (parent[0],)).fetchall()
-                        self.pendingOrders.insert('', 'end', values=(parent[1], '', '', parent[3]/100, parent[4]), iid=self.id_orders)
+                        order_items = cursor.execute(
+                            'SELECT product_name, quantity, price FROM ORDER_ITEMS WHERE order_id = ?',
+                            (parent[0],)
+                        ).fetchall()
+                        self.pendingOrders.insert(
+                            '', 'end',
+                            values=(parent[1], '', '', parent[3] / 100, parent[4]),
+                            iid=self.id_orders
+                        )
                         for item in order_items:
-                            self.pendingOrders.insert(self.id_orders, 'end', values = ('', item[0], item[1], item[2]/100, ''))
+                            self.pendingOrders.insert(
+                                self.id_orders, 'end',
+                                values=('', item[0], item[1], item[2] / 100, '')
+                            )
                         self.id_orders += 1
-                else:
+                else:  # Load finished orders
                     for parent in parent_orders:
-                        order_items = cursor.execute('SELECT product_name, quantity, price FROM ORDER_ITEMS WHERE order_id = ?', (parent[0],)).fetchall()
-                        self.completedOrders.insert('', 'end', values=(parent[1], '','', parent[3], parent[4]), iid=self.id_past)
+                        order_items = cursor.execute(
+                            'SELECT product_name, quantity, price FROM ORDER_ITEMS WHERE order_id = ?',
+                            (parent[0],)
+                        ).fetchall()
+                        self.completedOrders.insert(
+                            '', 'end',
+                            values=(parent[1], '', '', parent[3] / 100, parent[4]),
+                            iid=self.id_past
+                        )
                         for item in order_items:
-                            self.completedOrders.insert(self.id_past, 'end', values=('', item[0], item[1], item[2], ''))
+                            self.completedOrders.insert(
+                                self.id_past, 'end',
+                                values=('', item[0], item[1], item[2] / 100, '')
+                            )
                         self.id_past += 1
     
     def setNextState(self, state):
@@ -340,8 +363,7 @@ class SaleState(State):
         filename = asksaveasfilename(
             defaultextension="csv",
             filetypes=[("CSV files", "*.csv"), ('JSON files', '*.json')],
-            initialfile="historial.csv",
-            initialdir='/home/adriel'
+            initialfile="historial.csv"
         )
         if filename:
             if filename.lower().endswith('.csv'):
@@ -354,9 +376,9 @@ class SaleState(State):
                     for c in self.completedOrders.get_children(id):
                         child = self.completedOrders.item(c, 'values')
                         csv_data.append([parent[0], parent[4], parent[3], child[1], child[2], child[3]])
-                        with open(filename, 'w', newline='', encoding='utf-8') as f:
-                            file = csv.writer(f)
-                            file.writerows(csv_data)
+                with open(filename, 'w', newline='', encoding='utf-8') as f:
+                    file = csv.writer(f)
+                    file.writerows(csv_data)
 
             elif filename.lower().endswith('.json'):
                 data = {
@@ -378,8 +400,7 @@ class SaleState(State):
                         })
                     data['orders'].append(temp)
                 with open(filename, 'w', encoding='utf-8') as f:
-                    json.dump(data, f, ensure_ascii=False, indent=4)
-                    
+                    json.dump(data, f, ensure_ascii=False, indent=4)           
             else:
                 return
     @staticmethod
