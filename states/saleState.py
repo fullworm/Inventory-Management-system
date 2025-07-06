@@ -5,7 +5,9 @@ from ttkbootstrap.constants import *
 from database.database_func import get_db_connection
 from states.Popup import add_order as ao
 from copy import deepcopy
-
+import csv
+from tkinter.filedialog import asksaveasfilename
+import json
 
 class SaleState(State):
     def __init__(self, window):
@@ -14,7 +16,8 @@ class SaleState(State):
         self.canvas = ttk.Canvas(self.window, width=c.WIDTH, height=c.HEIGHT,)
         self.colors = self.window.style.colors
 
-        self.idN = 0
+        self.id_orders = 0
+        self.id_past = 0
 
         self.tabs = ttk.Notebook(self.canvas)
 
@@ -63,6 +66,10 @@ class SaleState(State):
 
         self.completedOrders.tag_configure('oddrow', background=self.colors.active)
         self.completedOrders.tag_configure('evenrow', background=self.colors.dark)
+
+        self.exportRecords = ttk.Button(self.historyFrame, text='Export Records', command=lambda:self.export_records())
+        self.exportRecords.place(relx=0.05, rely=0.2, anchor='nw')
+
         ###
 
 
@@ -86,7 +93,8 @@ class SaleState(State):
         self.tabs.add(self.orderFrame, text="Ordenes")
         self.tabs.add(self.historyFrame, text='Historial')
 
-        self.load_pending_orders()
+        self.load_order_data(finished=False)
+        self.load_order_data(finished=True)
         
 
         self.canvas.pack(fill='both', expand=YES)
@@ -101,7 +109,7 @@ class SaleState(State):
         if not result:
             return
         
-        tag = 'evenrow' if self.idN % 2 == 0 else 'oddrow' # generating tag so it knows what color to give the row in the table
+        tag = 'evenrow' if self.id_orders % 2 == 0 else 'oddrow' # generating tag so it knows what color to give the row in the table
         self.prodData = result['prod']
 
         self.pendingOrders.insert('', 'end', values=(
@@ -111,14 +119,14 @@ class SaleState(State):
             result['total'], 
             result['date']
             ), 
-            iid=self.idN,
+            iid=self.id_orders,
             tags=(tag,)
         )
 
         for i, row in enumerate(result['data']):
-            child_tag = 'evenrow' if (self.idN + i + 1) % 2 == 0 else 'oddrow'
-            self.pendingOrders.insert(f'{self.idN}', 'end', values=('', row[0], row[1], row[2]), tags=(child_tag,))
-        self.idN += 1
+            child_tag = 'evenrow' if (self.id_orders + i + 1) % 2 == 0 else 'oddrow'
+            self.pendingOrders.insert(f'{self.id_orders}', 'end', values=('', row[0], row[1], row[2]), tags=(child_tag,))
+        self.id_orders += 1
         self.update_stock()
 
     # right click menu
@@ -157,7 +165,6 @@ class SaleState(State):
             self.pendingOrders.delete(order_id)
             self.update_stock()
 
-    #TODO: If an order thats in the db is edited in the sale state it should be reflected in the db, remember to this. get the id of the order and update the apropriate things after      
     def edit_order(self):
         item = self.pendingOrders.selection()
         if item:
@@ -230,6 +237,8 @@ class SaleState(State):
 
             parent_val = self.pendingOrders.item(order_id, 'values')
 
+            self.completedOrders.insert('', 'end', values=parent_val, iid=self.id_past)
+
             child_items = []
             for id in self.pendingOrders.get_children(order_id):
                 child_items.append(list(self.pendingOrders.item(id, 'values'))[1:4])
@@ -255,21 +264,31 @@ class SaleState(State):
                         ''', 
                         (sale_id, item[0], int(item[1]), float(item[2])*100)
                     )
+                    self.completedOrders.insert(self.id_past, 'end', values=('', item[0], item[1], item[2], ''))
                 self.pendingOrders.delete(order_id)
+                self.id_past += 1
             self.update_stock()
                 
         
-    def load_pending_orders(self):
+    def load_order_data(self, finished:bool) -> None:
         with get_db_connection() as db:
             cursor = db.cursor()
-            parent_orders = cursor.execute('''SELECT * FROM ORDERS WHERE finished = 0''').fetchall()
+            parent_orders = cursor.execute('''SELECT * FROM ORDERS WHERE finished = ?''', (finished,)).fetchall()
             if parent_orders:
-                for parent in parent_orders:
-                    child_items = cursor.execute('SELECT product_name, quantity, price FROM ORDER_ITEMS WHERE order_id = ?', (parent[0],)).fetchall()
-                    self.pendingOrders.insert('', 'end', values=(parent[1], '', '', parent[3]/100, parent[4]), iid=self.idN)
-                    for item in child_items:
-                        self.pendingOrders.insert(self.idN, 'end', values = ('', item[0], item[1], item[2]/100, ''))
-                    self.idN += 1
+                if finished:
+                    for parent in parent_orders:
+                        order_items = cursor.execute('SELECT product_name, quantity, price FROM ORDER_ITEMS WHERE order_id = ?', (parent[0],)).fetchall()
+                        self.pendingOrders.insert('', 'end', values=(parent[1], '', '', parent[3]/100, parent[4]), iid=self.id_orders)
+                        for item in order_items:
+                            self.pendingOrders.insert(self.id_orders, 'end', values = ('', item[0], item[1], item[2]/100, ''))
+                        self.id_orders += 1
+                else:
+                    for parent in parent_orders:
+                        order_items = cursor.execute('SELECT product_name, quantity, price FROM ORDER_ITEMS WHERE order_id = ?', (parent[0],)).fetchall()
+                        self.completedOrders.insert('', 'end', values=(parent[1], '','', parent[3], parent[4]), iid=self.id_past)
+                        for item in order_items:
+                            self.completedOrders.insert(self.id_past, 'end', values=('', item[0], item[1], item[2], ''))
+                        self.id_past += 1
     
     def setNextState(self, state):
         self.save_pending_orders()
@@ -317,6 +336,52 @@ class SaleState(State):
                 cursor.execute('UPDATE INVENTORY SET amount = ? WHERE product_name = ?', (self.prodData[prod][0], prod))
             db.commit()
 
+    def export_records(self):
+        filename = asksaveasfilename(
+            defaultextension="csv",
+            filetypes=[("CSV files", "*.csv"), ('JSON files', '*.json')],
+            initialfile="historial.csv",
+            initialdir='/home/adriel'
+        )
+        if filename:
+            if filename.lower().endswith('.csv'):
+                csv_data = [
+                    #headers
+                    ['Order name', 'Order date', 'Total cost', 'Product name','quantity','Price']
+                ]
+                for id in self.completedOrders.get_children(''):
+                    parent = self.completedOrders.item(id, 'values')
+                    for c in self.completedOrders.get_children(id):
+                        child = self.completedOrders.item(c, 'values')
+                        csv_data.append([parent[0], parent[4], parent[3], child[1], child[2], child[3]])
+                        with open(filename, 'w', newline='', encoding='utf-8') as f:
+                            file = csv.writer(f)
+                            file.writerows(csv_data)
+
+            elif filename.lower().endswith('.json'):
+                data = {
+                    'orders': []
+                }
+                for id in self.completedOrders.get_children(''):
+                    temp = {}
+                    parent = self.completedOrders.item(id, 'values')
+                    temp['Order name'] = parent[0]
+                    temp['Order Date'] = parent[4]
+                    temp['Order price'] = float(parent[3])
+                    temp['Order items'] = []
+                    for c in self.completedOrders.get_children(id):
+                        child = self.completedOrders.item(c, 'values')
+                        temp['Order items'].append({
+                            'Product name': child[1], 
+                            'Quantity': int(child[2]), 
+                            'Price': child[3]
+                        })
+                    data['orders'].append(temp)
+                with open(filename, 'w', encoding='utf-8') as f:
+                    json.dump(data, f, ensure_ascii=False, indent=4)
+                    
+            else:
+                return
     @staticmethod
     def load_prod():
         new = {}
@@ -329,7 +394,3 @@ class SaleState(State):
             for row in data:
                 new[row[0]] = [row[1], float(row[2])/100, row[3]]
         return new
-
-
-
-

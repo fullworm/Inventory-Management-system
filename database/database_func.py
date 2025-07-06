@@ -101,5 +101,3 @@ def create_test_data_inv():
         for v in cursor.execute("SELECT * FROM INVENTORY").fetchall():
             print(v)
             
-
-
