@@ -7,7 +7,7 @@ from states.Popup import add_order as ao
 from copy import deepcopy
 import csv
 from tkinter.filedialog import asksaveasfilename
-import json
+from json import dump
 
 class SaleState(State):
     def __init__(self, window):
@@ -400,7 +400,7 @@ class SaleState(State):
                         })
                     data['orders'].append(temp)
                 with open(filename, 'w', encoding='utf-8') as f:
-                    json.dump(data, f, ensure_ascii=False, indent=4)           
+                    dump(data, f, ensure_ascii=False, indent=4)           
             else:
                 return
     @staticmethod
