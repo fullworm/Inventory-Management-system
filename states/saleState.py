@@ -8,6 +8,8 @@ from copy import deepcopy
 import csv
 from tkinter.filedialog import asksaveasfilename
 from json import dump
+from ttkbootstrap.dialogs import Messagebox
+
 
 class SaleState(State):
     def __init__(self, window):
@@ -23,13 +25,13 @@ class SaleState(State):
 
         self.orderFrame = ttk.Frame(self.window)
         self.historyFrame = ttk.Frame(self.window)
-        
+
         ### Orders
         self.context_menu = ttk.Menu(self.orderFrame, tearoff=0)
         self.context_menu.add_command(label="Edit", command=lambda:self.edit_order())
         self.context_menu.add_command(label="Delete", command=lambda: self.remove_order())
         self.context_menu.add_command(label='Mark Done', command=lambda: self.mark_done())
-        
+
         self.pendingOrders = ttk.Treeview(self.orderFrame, columns=("Nombre de orden","Producto", "Cantidad", "Precio", "Fecha de entrega"), show="headings")
         self.pendingOrders.heading("Nombre de orden", text="Nombre de orden")
         self.pendingOrders.heading("Producto", text="Producto")
@@ -43,8 +45,8 @@ class SaleState(State):
 
         self.pendingOrders.tag_configure('oddrow', background=self.colors.active)
         self.pendingOrders.tag_configure('evenrow', background=self.colors.dark)
-        
-        
+
+
 
         self.prodData = self.load_prod()
 
@@ -53,6 +55,8 @@ class SaleState(State):
         ###
 
         ### Past Orders
+        self.pastMenu = ttk.Menu(self.historyFrame, tearoff=0)
+        self.pastMenu.add_command(label='Borrar Record', command=lambda:self.remove_record())
         self.completedOrders = ttk.Treeview(self.historyFrame, columns=("Nombre de orden","Producto", "Cantidad", "Precio", "Fecha de entrega"), show="headings")
         self.completedOrders.heading("Nombre de orden", text="Nombre de orden")
         self.completedOrders.heading("Producto", text="Producto")
@@ -69,6 +73,9 @@ class SaleState(State):
 
         self.exportRecords = ttk.Button(self.historyFrame, text='Export Records', command=lambda:self.export_records())
         self.exportRecords.place(relx=0.05, rely=0.2, anchor='nw')
+
+        self.nukeRecords = ttk.Button(self.historyFrame, text='Borrar Records', command=lambda:self.nuke_records())
+        self.nukeRecords.place(relx=0.2, rely=0.2, anchor='nw')
 
         ###
 
@@ -88,6 +95,7 @@ class SaleState(State):
         self.historyFrame.configure(width=1200, height=800)
 
         self.pendingOrders.bind('<Button-3>', self.on_right_click)
+        self.completedOrders.bind('<Button-3>', self.on_right_click_2)
         self.window.protocol("WM_DELETE_WINDOW", lambda: (self.save_pending_orders(), self.window.destroy()))
 
         self.tabs.add(self.orderFrame, text="Ordenes")
@@ -137,7 +145,11 @@ class SaleState(State):
             self.pendingOrders.selection_set(item)
             # Show context menu
             self.context_menu.tk_popup(event.x_root, event.y_root)
-
+    def on_right_click_2(self, event):
+        record = self.completedOrders.identify_row(event.y)
+        if record:
+            self.completedOrders.selection_set(record)
+            self.pastMenu.tk_popup(event.x_root, event.y_root)
     def remove_order(self):
         item = self.pendingOrders.selection()
         if item:
@@ -155,8 +167,6 @@ class SaleState(State):
                     cursor.execute('DELETE FROM ORDER_ITEMS WHERE order_id = ?', (sale_id,))
                 db.commit()
 
-
-            
             # add stock to products on canceled order
             for id in self.pendingOrders.get_children(order_id):
                 prod = self.pendingOrders.item(id, 'values')
@@ -164,6 +174,36 @@ class SaleState(State):
                 self.prodData[prod[1]][0] += quantity
             self.pendingOrders.delete(order_id)
             self.update_stock()
+
+    def remove_record(self):
+        record = self.completedOrders.selection()
+        if record:
+            record_id = record [0]
+
+            entry = self.completedOrders.item(record_id, 'values')
+
+            with get_db_connection() as db:
+                cursor = db.cursor()
+                row = cursor.execute('SELECT id FROM ORDERS WHERE name = ?', (entry[0],)).fetchone()[0]
+                if row:
+                    cursor.execute('DELETE FROM ORDERS WHERE id = ?', (row,))
+                    cursor.execute('DELETE FROM ORDER_ITEMS WHERE id = ?', (row,))
+                db.commit()
+            self.completedOrders.delete(record_id)
+
+
+    def nuke_records(self):
+        choice = Messagebox.yesno(parent=self.window, message='Esto borrara todos los records en la base de datos, esto esta bien?', title='Quidado!', alert=True)
+        if choice == 'Yes':
+            with get_db_connection() as db:
+                cursor = db.cursor()
+                cursor.execute('DELETE FROM ORDERS')
+                cursor.execute('DELETE FROM ORDER_ITEMS WHERE order_id IN (SELECT id FROM ORDERS WHERE finished = 1)') 
+                db.commit()
+            parents = self.completedOrders.get_children('')
+            self.completedOrders.delete(*parents)
+        else:
+            return
 
     def edit_order(self):
         item = self.pendingOrders.selection()
@@ -245,16 +285,31 @@ class SaleState(State):
 
             with get_db_connection() as db:
                 cursor = db.cursor()
+                # Check if unfinished order exists
                 cursor.execute(
-                    '''
-                       INSERT INTO ORDERS 
-                       (name, finished, total_price, date) 
-                       VALUES (?,?,?,?)
-                    ''', 
-                       (parent_val[0], 1, float(parent_val[3])*100, parent_val[4])
+                    'SELECT id FROM ORDERS WHERE name = ? AND finished = 0 AND total_price = ? AND date = ?',
+                    (parent_val[0], float(parent_val[3])*100, parent_val[4])
+                )
+                row = cursor.fetchone()
+                if row:
+                    sale_id = row[0]
+                    # Mark as finished
+                    cursor.execute('UPDATE ORDERS SET finished = 1 WHERE id = ?', (sale_id,))
+                    # Remove old items
+                    cursor.execute('DELETE FROM ORDER_ITEMS WHERE order_id = ?', (sale_id,))
+                else:
+                    # Insert new finished order
+                    cursor.execute(
+                        '''
+                        INSERT INTO ORDERS 
+                        (name, finished, total_price, date) 
+                        VALUES (?,?,?,?)
+                        ''', 
+                        (parent_val[0], 1, float(parent_val[3])*100, parent_val[4])
                     )
-                sale_id = cursor.lastrowid
-                
+                    sale_id = cursor.lastrowid
+
+                # Insert order items
                 for item in child_items:
                     cursor.execute(
                         '''
@@ -265,6 +320,7 @@ class SaleState(State):
                         (sale_id, item[0], int(item[1]), float(item[2])*100)
                     )
                     self.completedOrders.insert(self.id_past, 'end', values=('', item[0], item[1], item[2], ''))
+                db.commit()
                 self.pendingOrders.delete(order_id)
                 self.id_past += 1
             self.update_stock()
