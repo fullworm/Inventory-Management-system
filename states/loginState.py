@@ -8,7 +8,6 @@ class loginState(State):
     def __init__(self, window):
         super().__init__("LoginState", None) #calling parent state class
         self.username = ""
-        self.password = ""
         self.window = window
         self.canvas = ttk.Canvas(self.window, width=c.WIDTH, height=c.HEIGHT)
 
@@ -55,6 +54,7 @@ class loginState(State):
             return
         try:
             if u.user_login(username, password):
+                self.username = username
                 self.setNextState("MenuState")
             else:
                 messagebox.showerror("Error", "Invalid username or password")
@@ -63,6 +63,7 @@ class loginState(State):
         except Exception as e:
             messagebox.showerror("Error", "Login failed. Please try again.")
             print(f"Login error: {str(e)}")  # For debugging
-
+    def get_user_name(self):
+        return self.username
 
 

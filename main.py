@@ -5,18 +5,18 @@ from states import loginState
 from states import menuState
 from states import inventoryState
 from states import saleState
+from states import settingsState
 import const as c
 from database import database_func as db
 
 class App:
     def __init__(self, master):
-
         self.master = master
         self.master.title("Manejador de inventario y ordenes")
 
         self.current_canvas = ""
+        self.logedInUser = ''
         self.show_canvas("LoginState")
-
 
     def show_canvas(self, state_name):
         # Hide current state if exists
@@ -25,11 +25,16 @@ class App:
         if state_name == "LoginState":
             self.current_canvas = loginState.loginState(self.master)
         elif state_name == "MenuState":
-            self.current_canvas = menuState.MenuState(self.master)
+            if hasattr(self.current_canvas, 'get_user_name'):
+                self.logedInUser = self.current_canvas.get_user_name()
+
+            self.current_canvas = menuState.MenuState(self.master, self.logedInUser)
         elif state_name == "InventoryState":
             self.current_canvas = inventoryState.InventoryState(self.master)
         elif state_name == "SaleState":
             self.current_canvas = saleState.SaleState(self.master)
+        elif state_name == 'SettingState':
+            self.current_canvas = settingsState.SettingState(self.master, self.logedInUser)
 
         self.current_canvas.canvas.pack(fill=BOTH, expand=YES)
         

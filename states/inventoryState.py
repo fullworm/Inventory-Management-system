@@ -86,7 +86,7 @@ class InventoryState(State):
                         p[1] = 0
                     else:
                         p[1] -= quantity
-                if price:
+                if price >= 0:
                     p[2] = price
 
         self.InventoryTable.build_table_data(

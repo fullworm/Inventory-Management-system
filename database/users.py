@@ -1,6 +1,6 @@
 import bcrypt as bc
 from database.database_func import get_db_connection
-
+import json
 
 def validate_password(password:str) -> bool:
     if not all(32 <= ord(char) <= 126 for char in password):
@@ -17,6 +17,16 @@ def new_user(username, password, privilege=1) -> None:
         cursor = conn.cursor()
         try:
             password = hash_password(password)
+            with open('users.json', 'r+') as u:
+                users = json.load(u)
+                users[username] = {
+                        'Profile Picture': '',
+                        'Profile Picture Small': '',
+                        'Chosen Theme': '',
+                    }
+                json.dump(users, u)
+                u.close()
+
             cursor.execute("INSERT INTO USERS (username, password, privilege) VALUES (?, ?, ?)", (username, password, privilege))
             conn.commit()
         except Exception:
@@ -27,6 +37,11 @@ def delete_user(username:str) -> None:
         cursor = conn.cursor()
         try:
             cursor.execute("DELETE FROM USERS WHERE username = ?", (username,))
+            with open('users.json', 'r+') as u:
+                users = json.load(u)
+                del users[username]
+                json.dump(users, u)
+                u.close()
             conn.commit()
         except Exception:
             return
